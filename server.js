@@ -44,13 +44,39 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/payments", paymentRoutes);
 
 // ---------------- MONGODB CONNECTION ----------------
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected Successfully"))
-  .catch((err) => {
-    console.error(" MongoDB Connection Failed:", err.message);
-    process.exit(1);
-  });
+// mongoose
+//   .connect(process.env.MONGO_URI)
+//   .then(() => console.log("MongoDB Connected Successfully"))
+//   .catch((err) => {
+//     console.error(" MongoDB Connection Failed:", err.message);
+//     process.exit(1);
+//   });
+
+let isConnected = false;
+
+async function connectToMongoDB() {
+  try {
+    if (isConnected) return; 
+
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    isConnected = true;
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+  }
+}
+
+// Middleware to ensure DB connection before handling requests
+app.use(async (req, res, next) => {
+  if (!isConnected) {
+    await connectToMongoDB();
+  }
+  next();
+});
 
 // ---------------- MULTER SETUP ----------------
 const storage = multer.memoryStorage();
@@ -287,3 +313,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+module.exports = app
