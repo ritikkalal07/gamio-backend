@@ -25,14 +25,16 @@ const Booking = require("./models/BookModel.js");
 const app = express();
 
 // ----------------------------
-// CORS (Render + localhost)
+// CORS (deployed frontend + localhost)
 // ----------------------------
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-origin: [
-  "http://localhost:3000",
-  "https://your-frontend-domain.onrender.com"
-],
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -42,6 +44,10 @@ origin: [
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(bodyParser.json());
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
 // ----------------------------
 // MONGO DB CONNECTION
