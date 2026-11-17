@@ -1,6 +1,6 @@
-import jwt from "jsonwebtoken";
+const jwt = require("jsonwebtoken");
 
-export const protect = (req, res, next) => {
+const protect = (req, res, next) => {
   try {
     let token;
 
@@ -25,12 +25,14 @@ export const protect = (req, res, next) => {
   }
 };
 
-export const adminOnly = (req, res, next) => {
+const adminOnly = (req, res, next) => {
   if (!req.user || req.user.user_type !== "admin") {
     return res.status(403).json({ message: "Admins only" });
   }
   next();
 };
+
+module.exports = { protect, adminOnly };
 
 // import jwt from "jsonwebtoken";
 
