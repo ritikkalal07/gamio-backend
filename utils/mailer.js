@@ -1,7 +1,6 @@
 const nodemailer = require("nodemailer");
 
-
-let transporterPromise = (async () => {
+function createTransporter() {
   if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.error(
       "[Mailer] Missing SMTP credentials in .env (EMAIL_HOST, EMAIL_USER, EMAIL_PASS)"
@@ -11,30 +10,21 @@ let transporterPromise = (async () => {
 
   console.log(`[Mailer] Connecting to SMTP server: ${process.env.EMAIL_HOST}:${process.env.EMAIL_PORT}`);
 
-  const transporter = nodemailer.createTransport({
+  return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: Number(process.env.EMAIL_PORT || 587),
     secure: process.env.EMAIL_SECURE === "true", // true = port 465 (SSL)
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
-
-  try {
-    await transporter.verify();
-    console.log("[Mailer] SMTP connection verified successfully ✅");
-  } catch (err) {
-    console.error("[Mailer] SMTP verification failed ❌:", err.message);
-  }
-
-  return transporter;
-})();
-
+}
 
 async function sendOtpEmail(to, otp, purpose = "Login") {
-  const transporter = await transporterPromise;
-
   const subject =
     purpose === "Forgot"
       ? "Reset Your Password - Gamio"
@@ -51,17 +41,32 @@ async function sendOtpEmail(to, otp, purpose = "Login") {
     </div>
   `;
 
-  const info = await transporter.sendMail({
+  const message = {
     from:
       process.env.EMAIL_FROM ||
       `"Gamio" <${process.env.EMAIL_USER || "no-reply@gamio.app"}>`,
     to,
     subject,
     html,
-  });
+  };
 
-  console.log(`[Mailer] OTP email sent successfully to ${to}`);
-  return info;
+  let lastError;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const transporter = createTransporter();
+    try {
+      const info = await transporter.sendMail(message);
+      console.log(`[Mailer] OTP email sent successfully to ${to}`);
+      return info;
+    } catch (err) {
+      lastError = err;
+      console.error(`[Mailer] OTP send attempt ${attempt} failed:`, err.message);
+      if (attempt === 1) {
+        transporter.close();
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 module.exports = { sendOtpEmail };
