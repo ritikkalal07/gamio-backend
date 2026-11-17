@@ -27,10 +27,14 @@ const app = express();
 // ----------------------------
 // CORS (deployed frontend + localhost)
 // ----------------------------
-const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://gamio-app.vercel.app",
+  ...(process.env.FRONTEND_URL || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
 
 app.use(
   cors({
